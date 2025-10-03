@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: stock-db
+spec:
+  serviceName: "stock-db-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stock-db
+  template:
+    metadata:
+      labels:
+        app: stock-db
+    spec:
+      containers:
+        - name: stock-db
+          image: stock-db:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-data
+          emptyDir: {}   # temp storage (good for dev; use PVC in prod)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stock-db-service
+spec:
+  clusterIP: None   # required for StatefulSet
+  selector:
+    app: stock-db
+  ports:
+    - port: 3306
+      targetPort: 3306
