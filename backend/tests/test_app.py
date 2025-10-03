@@ -1,6 +1,8 @@
 import pytest
 from unittest.mock import patch, MagicMock
 import sys, os
+
+# Ensure backend root is in path so `app` can be imported
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from app import app, moving_average
 
@@ -61,15 +63,16 @@ def test_get_stocks_db_error(mock_db, client):
 # --------------------------
 @patch("app.get_db_connection")
 def test_predict_success(mock_db, client):
-    # Mock last 3 prices for ticker AAPL
+    # Mock DB rows (DB returns newest→oldest, backend reverses them)
     mock_cursor = MagicMock()
-    mock_cursor.fetchall.return_value = [(100,), (110,), (120,)]
+    mock_cursor.fetchall.return_value = [(120,), (110,), (100,)]
     mock_db.return_value.cursor.return_value = mock_cursor
 
     response = client.get("/predict?ticker=AAPL")
     assert response.status_code == 200
     data = response.get_json()
     assert data["ticker"] == "AAPL"
+    # ✅ Expect oldest→newest after backend reverse
     assert data["last_prices"] == [100, 110, 120]
     assert data["predicted_price"] == 110.0
 
@@ -78,7 +81,7 @@ def test_predict_success(mock_db, client):
 def test_predict_not_enough_data(mock_db, client):
     # Mock only 2 rows returned
     mock_cursor = MagicMock()
-    mock_cursor.fetchall.return_value = [(100,), (110,)]
+    mock_cursor.fetchall.return_value = [(110,), (100,)]
     mock_db.return_value.cursor.return_value = mock_cursor
 
     response = client.get("/predict?ticker=AAPL")
