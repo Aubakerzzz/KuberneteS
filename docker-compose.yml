@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  db:
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    container_name: stock-db
+    ports:
+      - "3307:3306"   # optional, map to host if you want direct MySQL access
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: stocks
+      MYSQL_USER: stockuser
+      MYSQL_PASSWORD: stockpass
+    volumes:
+      - db_data:/var/lib/mysql
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stock-backend
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: stockuser
+      DB_PASSWORD: stockpass
+      DB_NAME: stocks
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: stock-frontend
+    ports:
+      - "5050:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
